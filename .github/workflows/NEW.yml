@@ -1,10 +1,10 @@
-name: FreeRDP with Pinggy
+name: FreeRDP via Pinggy SSH
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  rdp:
     runs-on: windows-latest
     timeout-minutes: 360
 
@@ -15,11 +15,9 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-      - name: Download Pinggy SSH Binary (Dropbear)
+      - name: Start Pinggy Tunnel via SSH
+        shell: powershell
         run: |
-          Invoke-WebRequest -Uri "https://github.com/TheMBah/Pinggy-RDP/releases/latest/download/dropbear.zip" -OutFile dropbear.zip
-          Expand-Archive dropbear.zip -DestinationPath dropbear
-
-      - name: Start Pinggy RDP Tunnel
-        run: |
-          ./dropbear/dbclient.exe -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io
+          Start-Process powershell -WindowStyle Hidden -ArgumentList @"
+          ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io
+"@
