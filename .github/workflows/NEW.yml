@@ -40,17 +40,23 @@ jobs:
     - name: Configure Windows Firewall
       run: |
         # Allow RDP port 3389
-        netsh advfirewall firewall add rule name="Allow RDP" dir=in action=allow protocol=TCP localport hunt=3389
+        netsh advfirewall firewall add rule name="Allow RDP" dir=in action=allow protocol=TCP localport=3389
+        # Verify firewall rule
+        netsh advfirewall firewall show rule name="Allow RDP"
+      shell: powershell
+
+    - name: Test Network Connectivity
+      run: |
+        # Test connection to Pinggy server
+        Test-NetConnection -ComputerName ap.a.pinggy.io -Port 443
       shell: powershell
 
     - name: Start Pinggy Tunnel
       run: |
-        # Run SSH in background and capture output
-        Start-Process -FilePath "ssh" -ArgumentList "-p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io" -RedirectStandardOutput "pinggy.log" -NoNewWindow
-        # Wait briefly to capture initial output
-        Start-Sleep -Seconds 10
-        # Display Pinggy output
-        Get-Content -Path "pinggy.log"
+        # Run SSH and capture output directly
+        ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io | Tee-Object -FilePath pinggy.log
+        # Display log file
+        Get-Content -Path pinggy.log
       shell: powershell
 
     - name: Keep Workflow Alive
