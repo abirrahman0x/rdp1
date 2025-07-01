@@ -30,18 +30,28 @@ jobs:
       run: |
         Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
         refreshenv
-        # Verify PATH includes OpenSSH
-        Write-Output $env:PATH
-        # Verify ssh command is available
+        # Add OpenSSH to PATH explicitly
+        $env:PATH += ";C:\Program Files\OpenSSH-Win64"
+        # Verify PATH and SSH
+        Write-Output "Current PATH: $env:PATH"
         ssh -V
       shell: powershell
 
-    - name: Start Pinggy Tunnel
-      env:
-        PINGGY_TOKEN: ${{ secrets.PINGGY_TOKEN }} # Optional, if required by Pinggy
+    - name: Configure Windows Firewall
       run: |
-        ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io
-      shell: cmd
+        # Allow RDP port 3389
+        netsh advfirewall firewall add rule name="Allow RDP" dir=in action=allow protocol=TCP localport hunt=3389
+      shell: powershell
+
+    - name: Start Pinggy Tunnel
+      run: |
+        # Run SSH in background and capture output
+        Start-Process -FilePath "ssh" -ArgumentList "-p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io" -RedirectStandardOutput "pinggy.log" -NoNewWindow
+        # Wait briefly to capture initial output
+        Start-Sleep -Seconds 10
+        # Display Pinggy output
+        Get-Content -Path "pinggy.log"
+      shell: powershell
 
     - name: Keep Workflow Alive
       run: |
