@@ -1,79 +1,13 @@
-name: Windows RDP with Pinggy
+name: Free RDP Windows
 
-on:
-  workflow_dispatch: # Manual trigger
-  push:
-    branches:
-      - main
+on: workflow_dispatch
 
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-
-    - name: Install Chocolatey
-      run: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force;
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-      shell: powershell
-
-    - name: Install OpenSSH
-      run: |
-        choco install openssh -y --force
-      shell: powershell
-
-    - name: Refresh Environment
-      run: |
-        Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
-        refreshenv
-        # Add OpenSSH to PATH explicitly
-        $env:PATH += ";C:\Program Files\OpenSSH-Win64"
-        # Verify PATH and SSH
-        Write-Output "Current PATH: $env:PATH"
-        ssh -V
-      shell: powershell
-
-    - name: Configure Windows Firewall
-      run: |
-        # Allow RDP port 3389
-        netsh advfirewall firewall add rule name="Allow RDP" dir=in action=allow protocol=TCP localport=3389
-        # Verify firewall rule
-        netsh advfirewall firewall show rule name="Allow RDP"
-      shell: powershell
-
-    - name: Test Network Connectivity
-      run: |
-        # Test connection to Pinggy server
-        Test-NetConnection -ComputerName ap.a.pinggy.io -Port 443
-      shell: powershell
-
-    - name: Start Pinggy Tunnel
-      run: |
-        # Start SSH in background and redirect output
-        Start-Process -FilePath "ssh" -ArgumentList "-p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io" -RedirectStandardOutput "pinggy.log" -RedirectStandardError "pinggy_err.log" -NoNewWindow -PassThru | Out-Null
-        # Wait for Pinggy to generate URL, check periodically
-        $timeout = 120 # Wait up to 2 minutes
-        $elapsed = 0
-        while ($elapsed -lt $timeout) {
-          Write-Output "Checking pinggy.log at $elapsed seconds..."
-          Get-Content -Path "pinggy.log" -ErrorAction SilentlyContinue
-          Write-Output "Checking pinggy_err.log at $elapsed seconds..."
-          Get-Content -Path "pinggy_err.log" -ErrorAction SilentlyContinue
-          Start-Sleep -Seconds 10
-          $elapsed += 10
-        }
-        Write-Output "Final Pinggy Output:"
-        Get-Content -Path "pinggy.log" -ErrorAction SilentlyContinue
-        Write-Output "Final Pinggy Errors (if any):"
-        Get-Content -Path "pinggy_err.log" -ErrorAction SilentlyContinue
-      shell: powershell
-
-    - name: Keep Workflow Alive
-      run: |
-        # Keep the workflow running for RDP access
-        Start-Sleep -Seconds 3600 # Adjust time as needed (e.g., 1 hour)
-      shell: powershell
+      - name: Enable RDP
+        run: |
+          curl -L -o winrdp.bat https://raw.githubusercontent.com/PR3R00T/windows-rdp/main/winrdp.bat
+          start winrdp.bat
+          timeout /t 36000
