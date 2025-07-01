@@ -1,23 +1,37 @@
-name: FreeRDP via Pinggy SSH
+name: Windows RDP with Pinggy
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Manual trigger
+  push:
+    branches:
+      - main
 
 jobs:
-  rdp:
+  build:
     runs-on: windows-latest
-    timeout-minutes: 360
 
     steps:
-      - name: Enable RDP and Set Password
-        run: |
-          net user runneradmin MyStrongPass123
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      - name: Start Pinggy Tunnel via SSH
-        shell: powershell
-        run: |
-          Start-Process powershell -WindowStyle Hidden -ArgumentList @"
-          ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io
-"@
+    - name: Install SSH and Dependencies
+      run: |
+        # Install OpenSSH
+        choco install openssh -y
+        # Refresh environment variables
+        refreshenv
+      shell: powershell
+
+    - name: Start Pinggy Tunnel
+      env:
+        PINGGY_TOKEN: ${{ secrets.PINGGY_TOKEN }} # Optional, if required by Pinggy
+      run: |
+        # Download and install Pinggy CLI (if needed) or use SSH directly
+        ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io
+      shell: cmd
+
+    - name: Keep Workflow Alive
+      run: |
+        # Keep the workflow running for RDP access
+        Start-Sleep -Seconds 3600 # Adjust time as needed (e.g., 1 hour)
+      shell: powershell
