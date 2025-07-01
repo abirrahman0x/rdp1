@@ -55,12 +55,20 @@ jobs:
       run: |
         # Start SSH in background and redirect output
         Start-Process -FilePath "ssh" -ArgumentList "-p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io" -RedirectStandardOutput "pinggy.log" -RedirectStandardError "pinggy_err.log" -NoNewWindow -PassThru | Out-Null
-        # Wait for Pinggy to generate URL
-        Start-Sleep -Seconds 30
-        # Display log files
-        Write-Output "Pinggy Output:"
+        # Wait for Pinggy to generate URL, check periodically
+        $timeout = 120 # Wait up to 2 minutes
+        $elapsed = 0
+        while ($elapsed -lt $timeout) {
+          Write-Output "Checking pinggy.log at $elapsed seconds..."
+          Get-Content -Path "pinggy.log" -ErrorAction SilentlyContinue
+          Write-Output "Checking pinggy_err.log at $elapsed seconds..."
+          Get-Content -Path "pinggy_err.log" -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 10
+          $elapsed += 10
+        }
+        Write-Output "Final Pinggy Output:"
         Get-Content -Path "pinggy.log" -ErrorAction SilentlyContinue
-        Write-Output "Pinggy Errors (if any):"
+        Write-Output "Final Pinggy Errors (if any):"
         Get-Content -Path "pinggy_err.log" -ErrorAction SilentlyContinue
       shell: powershell
 
