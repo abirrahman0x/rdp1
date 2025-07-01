@@ -1,4 +1,4 @@
-name: FreeRDP
+name: FreeRDP with Pinggy
 
 on:
   workflow_dispatch:
@@ -9,19 +9,17 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Download Ngrok v3 Stable
+      - name: Enable RDP and Set Password
         run: |
-          Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-          Expand-Archive ngrok.zip -DestinationPath ngrok
-
-      - name: Authenticate Ngrok
-        run: .\ngrok\ngrok.exe config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-
-      - name: Enable RDP & Set Password
-        run: |
-          net user runneradmin NewPass123
+          net user runneradmin MyStrongPass123
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-      - name: Start Ngrok Tunnel
-        run: .\ngrok\ngrok.exe tcp 3389
+      - name: Download Pinggy SSH Binary (Dropbear)
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/TheMBah/Pinggy-RDP/releases/latest/download/dropbear.zip" -OutFile dropbear.zip
+          Expand-Archive dropbear.zip -DestinationPath dropbear
+
+      - name: Start Pinggy RDP Tunnel
+        run: |
+          ./dropbear/dbclient.exe -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io
