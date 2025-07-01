@@ -14,19 +14,32 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Install SSH and Dependencies
+    - name: Install Chocolatey
       run: |
-        # Install OpenSSH
-        choco install openssh -y
-        # Refresh environment variables
+        Set-ExecutionPolicy Bypass -Scope Process -Force;
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+      shell: powershell
+
+    - name: Install OpenSSH
+      run: |
+        choco install openssh -y --force
+      shell: powershell
+
+    - name: Refresh Environment
+      run: |
+        Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
         refreshenv
+        # Verify PATH includes OpenSSH
+        Write-Output $env:PATH
+        # Verify ssh command is available
+        ssh -V
       shell: powershell
 
     - name: Start Pinggy Tunnel
       env:
         PINGGY_TOKEN: ${{ secrets.PINGGY_TOKEN }} # Optional, if required by Pinggy
       run: |
-        # Download and install Pinggy CLI (if needed) or use SSH directly
         ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:3389 tcp@ap.a.pinggy.io
       shell: cmd
 
